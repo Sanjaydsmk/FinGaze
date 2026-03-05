@@ -4,4 +4,6 @@ numpy
 yfinance
 matplotlib
 scikit-learn
-finrl
+stable-baselines3
+gymnasium
+torch
