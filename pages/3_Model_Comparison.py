@@ -133,6 +133,26 @@ def load_rl_model(name: str):
     return RL_MODELS[name].load(path)
 
 
+def extract_close_series(data: pd.DataFrame) -> pd.Series:
+    """Normalize yfinance output to a single close-price series."""
+    if data is None or data.empty:
+        return pd.Series(dtype=np.float64)
+
+    if isinstance(data.columns, pd.MultiIndex):
+        if "Close" not in data.columns.get_level_values(0):
+            return pd.Series(dtype=np.float64)
+        close_part = data["Close"]
+        if isinstance(close_part, pd.DataFrame):
+            if close_part.shape[1] < 1:
+                return pd.Series(dtype=np.float64)
+            return close_part.iloc[:, 0].dropna()
+        return close_part.dropna()
+
+    if "Close" not in data.columns:
+        return pd.Series(dtype=np.float64)
+    return data["Close"].dropna()
+
+
 def max_drawdown(equity: np.ndarray) -> float:
     if len(equity) == 0:
         return 0.0
@@ -376,12 +396,10 @@ if run:
 
     for t in tickers:
         data = yf.download(t, start=from_date, end=to_date, auto_adjust=True, progress=False)
-        if data.empty or "Close" not in data.columns:
-            continue
-        close = data["Close"].dropna()
+        close = extract_close_series(data)
         if len(close) < 60:
             continue
-        returns = close.pct_change().dropna().to_numpy(dtype=np.float64)
+        returns = close.pct_change().dropna().to_numpy(dtype=np.float64).reshape(-1)
         if len(returns) < 30:
             continue
 
