@@ -2,6 +2,7 @@ streamlit
 pandas
 numpy
 yfinance
+plotly
 matplotlib
 scikit-learn
 stable-baselines3

@@ -87,6 +87,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if px is None:
+    st.warning("Plotly is not installed. Showing fallback charts.")
+
 MODEL_PATH = "models"
 RL_MODELS = {
     "PPO": PPO,
@@ -458,6 +461,8 @@ if run:
                     title=f"{stock} - RL Model Comparison",
                 )
                 st.plotly_chart(style_fig(fig_rl), use_container_width=True)
+            else:
+                st.bar_chart(stock_df.set_index("Model")[["Return %", "Accuracy %"]])
 
     st.markdown("### 2) Sector Model Comparison (Sector Page Models)")
     if not selected_sectors:
@@ -539,5 +544,11 @@ if run:
                             title="Sector Model Comparison",
                         )
                         st.plotly_chart(style_fig(fig_sector), use_container_width=True)
+                    else:
+                        sector_bar = sector_df.sort_values(
+                            ["Direction Accuracy %", "Top Picks Avg Return %"],
+                            ascending=False,
+                        ).set_index("Sector Model")[["Direction Accuracy %", "Top Picks Avg Return %"]]
+                        st.bar_chart(sector_bar)
 else:
     st.info("Set parameters and click **Run Model Comparison**.")
