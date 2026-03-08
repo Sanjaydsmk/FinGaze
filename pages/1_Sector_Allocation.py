@@ -6,11 +6,14 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import yfinance as yf
 try:
     import plotly.express as px_plotly
+    import plotly.graph_objects as go
 except ImportError:
     px_plotly = None
+    go = None
 
 
 st.set_page_config(page_title="Sector Allocation", layout="wide")
@@ -73,6 +76,94 @@ st.markdown(
     color: #cbd5e1;
     font-size: 0.89rem;
 }
+.summary-wrap {
+    position: relative;
+    background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 64, 175, 0.24)),
+        rgba(10, 18, 35, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 22px;
+    padding: 20px 22px;
+    margin: 10px 0 14px 0;
+    box-shadow:
+        0 18px 40px rgba(2, 6, 23, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    overflow: hidden;
+    animation: fadeSlide 520ms ease-out, pulseGlow 3.2s ease-in-out infinite;
+}
+.summary-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.16), transparent 30%);
+    pointer-events: none;
+}
+.summary-title {
+    position: relative;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #dbeafe;
+    margin-bottom: 14px;
+}
+.summary-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+.summary-item {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(148, 163, 184, 0.04));
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 12px 24px rgba(2, 6, 23, 0.22);
+}
+.summary-label {
+    color: #bfdbfe;
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
+}
+.summary-value {
+    color: #f8fafc;
+    font-size: 2.15rem;
+    font-weight: 700;
+    margin-top: 8px;
+    letter-spacing: -0.03em;
+    animation: numberPop 900ms ease-out;
+}
+.summary-value.profit {
+    color: #4ade80;
+    text-shadow: 0 0 18px rgba(74, 222, 128, 0.2);
+}
+.summary-value.loss {
+    color: #f87171;
+    text-shadow: 0 0 18px rgba(248, 113, 113, 0.18);
+}
+.summary-trend {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+}
+.summary-trend.profit {
+    color: #86efac;
+}
+.summary-trend.loss {
+    color: #fca5a5;
+}
+@media (max-width: 900px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    .summary-value {
+        font-size: 1.8rem;
+    }
+}
 .pill {
     display: inline-block;
     padding: 2px 8px;
@@ -81,6 +172,56 @@ st.markdown(
     background: #1e293b;
     color: #7dd3fc;
     margin-bottom: 8px;
+}
+.selector-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.62));
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 14px;
+    padding: 12px 12px 8px 12px;
+    margin-bottom: 12px;
+    min-height: 112px;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.2);
+}
+.selector-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.selector-title {
+    color: #f8fafc;
+    font-size: 0.94rem;
+    font-weight: 700;
+}
+.selector-caption {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    margin-bottom: 6px;
+}
+.selector-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.14);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    color: #bfdbfe;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+[data-testid="stVerticalBlock"] .selector-card [data-baseweb="select"] > div {
+    min-height: 40px;
+}
+[data-testid="stVerticalBlock"] .selector-card [data-baseweb="select"] span {
+    font-size: 0.94rem;
+}
+[data-testid="stVerticalBlock"] .selector-card [data-baseweb="select"] {
+    margin-top: 2px;
+}
+[data-testid="stVerticalBlock"] .selector-card [data-testid="stCaptionContainer"] {
+    margin-top: 4px;
 }
 [data-testid="stPlotlyChart"] {
     border: 1px solid rgba(56, 189, 248, 0.18);
@@ -132,6 +273,15 @@ st.markdown(
     50% { transform: translateY(-2px); }
     100% { transform: translateY(0px); }
 }
+@keyframes pulseGlow {
+    0% { box-shadow: 0 8px 18px rgba(30, 58, 138, 0.20); }
+    50% { box-shadow: 0 12px 28px rgba(59, 130, 246, 0.30); }
+    100% { box-shadow: 0 8px 18px rgba(30, 58, 138, 0.20); }
+}
+@keyframes numberPop {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -176,6 +326,22 @@ def fmt_pct(v: float) -> str:
     return f"{float(v):.2f}%"
 
 
+def _summary_tone(value: float) -> str:
+    if value > 0:
+        return "profit"
+    if value < 0:
+        return "loss"
+    return "neutral"
+
+
+def _summary_note(value: float, neutral_text: str = "No change") -> str:
+    if value > 0:
+        return "Profit"
+    if value < 0:
+        return "Loss"
+    return neutral_text
+
+
 def render_stock_cards(
     df: pd.DataFrame,
     title: str,
@@ -186,26 +352,192 @@ def render_stock_cards(
         st.info("No items to display.")
         return
     sorted_df = df.sort_values("Sector").reset_index(drop=True)
+    total_alloc = float(sorted_df["Allocation $"].sum()) if "Allocation $" in sorted_df.columns else 0.0
     cols = st.columns(3)
     for idx, row in sorted_df.iterrows():
         col = cols[idx % 3]
         model_line = ""
         if show_model_ticker and "Model Ticker" in row:
             model_line = f"<div class='card-metric'><b>Model:</b> {row['Model Ticker']}</div>"
+        alloc_pct = (float(row["Allocation $"]) / total_alloc * 100.0) if total_alloc > 0 else 0.0
         with col:
             st.markdown(
                 f"""
 <div class="card">
   <div class="pill">{row['Sector']}</div>
   <div class="card-title">{row['Ticker']}</div>
-  <div class="card-sub">Allocation {fmt_money(row['Allocation $'])}</div>
+  <div class="card-sub">Suggested Weight: {fmt_pct(alloc_pct)}</div>
   {model_line}
-  <div class="card-metric"><b>Profit:</b> {fmt_money(row['Profit $'])} ({fmt_pct(row['Profit %'])})</div>
-  <div class="card-metric"><b>Ann Ret:</b> {fmt_pct(row['Ann. Return %'])} | <b>Vol:</b> {fmt_pct(row['Ann. Vol %'])}</div>
 </div>
 """,
                 unsafe_allow_html=True,
             )
+
+def render_final_portfolio_summary(df: pd.DataFrame) -> None:
+    if df.empty:
+        return
+    total_amount = float(df["Allocation $"].sum()) if "Allocation $" in df.columns else 0.0
+    total_profit = float(df["Profit $"].sum()) if "Profit $" in df.columns else 0.0
+    combined_amount = total_amount + total_profit
+    profit_tone = _summary_tone(total_profit)
+    combined_tone = _summary_tone(combined_amount - total_amount)
+
+    html = f"""
+    <style>
+      body {{
+        margin: 0;
+        background: transparent;
+        font-family: "Segoe UI", sans-serif;
+        color: #e2e8f0;
+      }}
+      .summary-wrap {{
+        position: relative;
+        background:
+          linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 64, 175, 0.24)),
+          rgba(10, 18, 35, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 22px;
+        padding: 20px 22px;
+        box-shadow:
+          0 18px 40px rgba(2, 6, 23, 0.42),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        overflow: hidden;
+      }}
+      .summary-wrap::before {{
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.16), transparent 30%);
+        pointer-events: none;
+      }}
+      .summary-title {{
+        position: relative;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #dbeafe;
+        margin-bottom: 14px;
+      }}
+      .summary-grid {{
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }}
+      .summary-item {{
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(148, 163, 184, 0.04));
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 18px;
+        padding: 14px 16px;
+        min-width: 0;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 12px 24px rgba(2, 6, 23, 0.22);
+      }}
+      .summary-label {{
+        color: #bfdbfe;
+        font-size: 0.88rem;
+        letter-spacing: 0.01em;
+      }}
+      .summary-value {{
+        color: #f8fafc;
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin-top: 8px;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        word-break: break-word;
+      }}
+      .summary-value.profit {{
+        color: #4ade80;
+        text-shadow: 0 0 18px rgba(74, 222, 128, 0.2);
+      }}
+      .summary-value.loss {{
+        color: #f87171;
+        text-shadow: 0 0 18px rgba(248, 113, 113, 0.18);
+      }}
+      .summary-trend {{
+        margin-top: 10px;
+        font-size: 0.82rem;
+        color: #cbd5e1;
+      }}
+      .summary-trend.profit {{
+        color: #86efac;
+      }}
+      .summary-trend.loss {{
+        color: #fca5a5;
+      }}
+      @media (max-width: 640px) {{
+        .summary-grid {{
+          grid-template-columns: 1fr;
+        }}
+        .summary-value {{
+          font-size: 1.7rem;
+        }}
+      }}
+    </style>
+    <div class="summary-wrap">
+      <div class="summary-title">Final Portfolio Summary</div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-label">Total Amount</div>
+          <div class="summary-value" data-value="{total_amount:.2f}">$0.00</div>
+          <div class="summary-trend">Initial capital deployed</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Profit Amount</div>
+          <div class="summary-value {profit_tone}" data-value="{total_profit:.2f}">$0.00</div>
+          <div class="summary-trend {profit_tone}">{_summary_note(total_profit)}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Combined Amount</div>
+          <div class="summary-value {combined_tone}" data-value="{combined_amount:.2f}">$0.00</div>
+          <div class="summary-trend {combined_tone}">{_summary_note(total_profit, "Matches capital")}</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const formatCurrency = (value) => {{
+        const sign = value < 0 ? "-" : "";
+        const abs = Math.abs(value);
+        return `${{sign}}$${{abs.toLocaleString("en-US", {{
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }})}}`;
+      }};
+
+      const animateValue = (el, endValue, duration) => {{
+        const startValue = 0;
+        const startTime = performance.now();
+
+        const step = (now) => {{
+          const progress = Math.min((now - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const currentValue = startValue + (endValue - startValue) * eased;
+          el.textContent = formatCurrency(currentValue);
+
+          if (progress < 1) {{
+            requestAnimationFrame(step);
+          }} else {{
+            el.textContent = formatCurrency(endValue);
+          }}
+        }};
+
+        requestAnimationFrame(step);
+      }};
+
+      const root = document.currentScript.parentElement;
+      const values = root.querySelectorAll(".summary-value[data-value]");
+      values.forEach((el, index) => {{
+        const value = Number(el.dataset.value || "0");
+        animateValue(el, value, 2600 + index * 650);
+      }});
+    </script>
+    """
+    components.html(html, height=185, scrolling=False)
 
 
 def plot_interactive_lines(df: pd.DataFrame, title: str, y_label: str) -> None:
@@ -225,6 +557,77 @@ def plot_interactive_lines(df: pd.DataFrame, title: str, y_label: str) -> None:
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.line_chart(df)
+
+
+def plot_modern_series_card(series: pd.Series, title: str, y_label: str) -> None:
+    clean = series.dropna()
+    if clean.empty:
+        st.write("No data available.")
+        return
+    if go is None:
+        plot_interactive_lines(pd.DataFrame({title: clean}, index=clean.index), title, y_label)
+        return
+
+    latest_delta = float(clean.iloc[-1] - clean.iloc[-2]) if len(clean) >= 2 else 0.0
+    line_color = "#60a5fa"
+    fill_color = "rgba(96, 165, 250, 0.14)"
+    glow_color = "rgba(96, 165, 250, 0.28)"
+    day_move = 0.0
+    if len(clean) >= 2 and float(clean.iloc[-2]) != 0.0:
+        day_move = ((float(clean.iloc[-1]) / float(clean.iloc[-2])) - 1.0) * 100.0
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=clean.index,
+            y=clean.values,
+            mode="lines",
+            line=dict(color=glow_color, width=10, shape="spline", smoothing=0.55),
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=clean.index,
+            y=clean.values,
+            mode="lines",
+            fill="tozeroy",
+            fillcolor=fill_color,
+            line=dict(color=line_color, width=3, shape="spline", smoothing=0.55),
+            name=title,
+            showlegend=False,
+            hovertemplate="%{x|%b %d, %Y}<br>%{y:,.2f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=325,
+        margin=dict(l=10, r=10, t=56, b=10),
+        paper_bgcolor="#061127",
+        plot_bgcolor="#08152d",
+        hovermode="x unified",
+        transition={"duration": 700, "easing": "cubic-in-out"},
+        title=dict(
+            text=f"{title}<br><sup style='color:{line_color}'>1D move: {day_move:+.2f}%</sup>",
+            x=0.03,
+            xanchor="left",
+            font=dict(size=18, color="#e2e8f0"),
+        ),
+        xaxis=dict(
+            title="",
+            showgrid=False,
+            showline=False,
+            zeroline=False,
+            tickfont=dict(color="#94a3b8"),
+        ),
+        yaxis=dict(
+            title=dict(text=y_label, font=dict(color="#cbd5e1")),
+            gridcolor="rgba(148, 163, 184, 0.14)",
+            zeroline=False,
+            tickfont=dict(color="#cbd5e1"),
+        ),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def style_animated_plotly(fig, chart_kind: str = "bar"):
@@ -680,6 +1083,8 @@ st.markdown(
 
 with st.sidebar:
     st.header("Sector Allocation Settings")
+    today = pd.Timestamp.today().date()
+    default_from_date = today - timedelta(days=365)
     initial_capital = st.number_input(
         "Initial Capital ($)",
         min_value=1000.0,
@@ -687,8 +1092,8 @@ with st.sidebar:
         value=10_000.0,
         step=1000.0,
     )
-    from_date = st.date_input("From Date")
-    to_date = st.date_input("To Date")
+    from_date = st.date_input("From Date", value=default_from_date)
+    to_date = st.date_input("To Date", value=today)
     model_name = st.selectbox("Model", MODEL_CHOICES)
     selected_sectors = st.multiselect(
         "Select Sectors (1 or more)",
@@ -767,23 +1172,13 @@ if selected_sectors:
     st.markdown(f"`Sectors used:` {', '.join(selected_sectors)}")
 render_stock_cards(stock_df, "Model Suggested Stocks")
 
-if px_plotly is not None and not stock_df.empty:
-    model_alloc_fig = px_plotly.bar(
-        stock_df.sort_values("Allocation $", ascending=False),
-        x="Sector",
-        y="Allocation $",
-        color="Profit %",
-        hover_data=["Ticker", "Profit $", "Ann. Return %", "Ann. Vol %"],
-        title="Model Allocation by Sector",
-    )
-    model_alloc_fig.update_layout(height=360)
-    model_alloc_fig = style_animated_plotly(model_alloc_fig, chart_kind="bar")
-    st.plotly_chart(model_alloc_fig, use_container_width=True)
-
 st.markdown("### Personal Stock Selection by Sector")
 st.caption("If you don't like a model stock, change it here. All graphs and forecasts update automatically.")
 user_selection: Dict[str, str] = {}
-for _, row in stock_df.sort_values("Sector").iterrows():
+sorted_rows = list(stock_df.sort_values("Sector").iterrows())
+selector_col_count = 3 if len(sorted_rows) <= 6 else 4
+selector_cols = st.columns(selector_col_count)
+for idx, (_, row) in enumerate(sorted_rows):
     sec = row["Sector"]
     model_ticker = row["Ticker"]
     options = list(dict.fromkeys(SECTOR_TICKERS.get(sec, [])))
@@ -792,18 +1187,30 @@ for _, row in stock_df.sort_values("Sector").iterrows():
     if model_ticker not in options:
         options = [model_ticker] + options
     default_idx = options.index(model_ticker) if model_ticker in options else 0
-    user_selection[sec] = st.selectbox(
-        f"{sec} stock",
-        options=options,
-        index=default_idx,
-        key=f"selected_stock_{sec}",
-    )
+    with selector_cols[idx % selector_col_count]:
+        st.markdown(
+            f"""
+            <div class="selector-card">
+              <div class="selector-head">
+                <div class="selector-title">{sec}</div>
+                <div class="selector-chip">Model: {model_ticker}</div>
+              </div>
+              <div class="selector-caption">Choose your stock</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        user_selection[sec] = st.selectbox(
+            f"{sec} stock",
+            options=options,
+            index=default_idx,
+            key=f"selected_stock_{sec}",
+            label_visibility="collapsed",
+        )
     chosen = user_selection[sec]
     if chosen not in prices_df.columns:
-        st.warning(
-            f"{sec}: `{chosen}` has no price data in the current date range. "
-            "Pick another stock or rebuild with a wider range."
-        )
+        with selector_cols[idx % selector_col_count]:
+            st.caption(f"{sec}: `{chosen}` has no price data for this range.")
 
 selected_sector_df, selected_stock_df, selected_equity_df = rebuild_selected_portfolio(
     prices_df=prices_df,
@@ -820,7 +1227,20 @@ st.session_state["sector_page_selected_stock_df"] = selected_stock_df.copy()
 st.session_state["sector_page_selected_equity_df"] = selected_equity_df.copy()
 st.session_state["sector_page_last_sims"] = int(sims)
 
+render_final_portfolio_summary(selected_stock_df)
 render_stock_cards(selected_stock_df, "Final Portfolio (After Your Selection)", show_model_ticker=True)
+
+st.markdown("### Final Portfolio Table")
+final_table_cols = ["Sector", "Ticker", "Model Ticker", "Allocation $", "Profit $", "Profit %"]
+available_cols = [c for c in final_table_cols if c in selected_stock_df.columns]
+final_table_df = selected_stock_df[available_cols].copy()
+if "Allocation $" in final_table_df.columns:
+    final_table_df["Allocation $"] = final_table_df["Allocation $"].map(lambda x: round(float(x), 2))
+if "Profit $" in final_table_df.columns:
+    final_table_df["Profit $"] = final_table_df["Profit $"].map(lambda x: round(float(x), 2))
+if "Profit %" in final_table_df.columns:
+    final_table_df["Profit %"] = final_table_df["Profit %"].map(lambda x: round(float(x), 2))
+st.dataframe(final_table_df, use_container_width=True, hide_index=True)
 
 if px_plotly is not None and not selected_sector_df.empty:
     sector_perf_fig = px_plotly.bar(
@@ -836,39 +1256,41 @@ if px_plotly is not None and not selected_sector_df.empty:
     st.plotly_chart(sector_perf_fig, use_container_width=True)
 
 st.markdown("### Equity Curve & Price for Selected Stocks")
-for _, row in selected_stock_df.sort_values("Sector").iterrows():
-    sec = row["Sector"]
-    ticker = row["Ticker"]
-    st.markdown(f"**{sec} – {ticker}**")
+chart_options = [
+    f"{row['Sector']} - {row['Ticker']}"
+    for _, row in selected_stock_df.sort_values("Sector").iterrows()
+]
 
-    eq_key = f"{sec}::{ticker}"
+if chart_options:
+    selector_col, _ = st.columns([1.2, 2.8], vertical_alignment="bottom")
+    with selector_col:
+        st.caption("View selected sector")
+        selected_chart_label = st.selectbox(
+            "View selected sector charts",
+            options=chart_options,
+            key="sector_chart_focus",
+            label_visibility="collapsed",
+        )
+    selected_sector, selected_ticker = selected_chart_label.split(" - ", 1)
+
+    eq_key = f"{selected_sector}::{selected_ticker}"
     eq = selected_equity_df.get(eq_key)
-    price_series = prices_df.get(ticker)
+    price_series = prices_df.get(selected_ticker)
+
     if eq is None or price_series is None:
         st.write("No data available.")
-        continue
-    eq = eq.dropna()
-    price_series = price_series.dropna()
-    if eq.empty or price_series.empty:
-        st.write("Not enough data.")
-        continue
-
-    with st.expander(f"{sec} - {ticker} charts", expanded=False):
-        c1, c2 = st.columns(2)
-        with c1:
-            st.caption("Equity curve ($)")
-            plot_interactive_lines(
-                pd.DataFrame({"Equity ($)": eq}, index=eq.index),
-                f"{sec} {ticker} Equity",
-                "USD",
-            )
-        with c2:
-            st.caption("Stock price")
-            plot_interactive_lines(
-                pd.DataFrame({"Price": price_series}, index=price_series.index),
-                f"{sec} {ticker} Price",
-                "Price",
-            )
+    else:
+        eq = eq.dropna()
+        price_series = price_series.dropna()
+        if eq.empty or price_series.empty:
+            st.write("Not enough data.")
+        else:
+            st.markdown(f"**{selected_sector} - {selected_ticker}**")
+            c1, c2 = st.columns(2)
+            with c1:
+                plot_modern_series_card(eq, f"{selected_sector} {selected_ticker} Equity", "USD")
+            with c2:
+                plot_modern_series_card(price_series, f"{selected_sector} {selected_ticker} Price", "Price")
 
 future_rows = []
 total_expected_profit = 0.0

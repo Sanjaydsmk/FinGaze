@@ -31,6 +31,19 @@ st.markdown(
     border-radius: 12px;
     padding: 12px;
 }
+.kpi-label {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+.kpi-value {
+    color: #f8fafc;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: break-word;
+}
 .snap {
     background: linear-gradient(180deg, #0f172a, #111827);
     border: 1px solid #334155;
@@ -68,8 +81,10 @@ if future_df.empty:
 
 period_text = ""
 if to_date is not None and forecast_to_date is not None:
+    start_text = pd.Timestamp(to_date + timedelta(days=1)).strftime("%Y-%m-%d")
+    end_text = pd.Timestamp(forecast_to_date).strftime("%Y-%m-%d")
     period_text = (
-        f"{to_date + timedelta(days=1)} to {forecast_to_date} "
+        f"{start_text} to {end_text} "
         f"({horizon_days} trading days, {sims} simulations)"
     )
 
@@ -84,7 +99,8 @@ with c1:
     st.markdown('</div>', unsafe_allow_html=True)
 with c2:
     st.markdown('<div class="kpi">', unsafe_allow_html=True)
-    st.metric("Forecast window", period_text if period_text else "N/A")
+    st.markdown('<div class="kpi-label">Forecast window</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-value">{period_text if period_text else "N/A"}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.caption("Forecast uses conservative base-case logic with stress/cost adjustments and capped upside.")
@@ -145,6 +161,7 @@ if px_plotly is not None:
     st.plotly_chart(pie, use_container_width=True)
 
 st.markdown("### Per-Stock Forecast Curves")
+curve_options = []
 for _, row in future_df.sort_values("Expected Return %", ascending=False).iterrows():
     sec = row["Sector"]
     ticker = row["Ticker"]
@@ -152,8 +169,22 @@ for _, row in future_df.sort_values("Expected Return %", ascending=False).iterro
     curve_df = curve_map.get(key)
     if curve_df is None or curve_df.empty:
         continue
+    curve_options.append(f"{sec} - {ticker}")
 
-    with st.expander(f"{sec} - {ticker}", expanded=False):
+if curve_options:
+    st.caption("View selected sector")
+    selected_curve_label = st.selectbox(
+        "View selected sector forecast",
+        options=curve_options,
+        key="future_curve_focus",
+        label_visibility="collapsed",
+    )
+    selected_sec, selected_ticker = selected_curve_label.split(" - ", 1)
+    selected_key = f"{selected_sec}::{selected_ticker}"
+    curve_df = curve_map.get(selected_key)
+
+    if curve_df is not None and not curve_df.empty:
+        st.markdown(f"**{selected_sec} - {selected_ticker}**")
         c1, c2 = st.columns(2)
         with c1:
             if px_plotly is not None:
@@ -162,7 +193,7 @@ for _, row in future_df.sort_values("Expected Return %", ascending=False).iterro
                     x="Date",
                     y=["Expected Equity ($)", "P10 Equity ($)", "P90 Equity ($)"],
                     template="plotly_dark",
-                    title=f"{ticker} Forecast Equity",
+                    title=f"{selected_ticker} Forecast Equity",
                 )
                 fig_eq.update_layout(height=320, paper_bgcolor="#020617", plot_bgcolor="#0f172a")
                 st.plotly_chart(fig_eq, use_container_width=True)
@@ -176,7 +207,7 @@ for _, row in future_df.sort_values("Expected Return %", ascending=False).iterro
                     x="Date",
                     y=["Expected Price", "P10 Price", "P90 Price"],
                     template="plotly_dark",
-                    title=f"{ticker} Forecast Price",
+                    title=f"{selected_ticker} Forecast Price",
                 )
                 fig_px.update_layout(height=320, paper_bgcolor="#020617", plot_bgcolor="#0f172a")
                 st.plotly_chart(fig_px, use_container_width=True)
