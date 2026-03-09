@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 import yfinance as yf
+from theme import apply_shared_theme, render_page_hero
 from stable_baselines3 import A2C, DDPG, PPO, SAC, TD3
 
 try:
@@ -38,6 +39,189 @@ st.markdown(
     border: 1px solid #334155;
     border-radius: 12px;
     padding: 12px;
+}
+.glass-panel {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(10, 20, 45, 0.9), rgba(3, 10, 28, 0.82));
+    border: 1px solid rgba(96, 165, 250, 0.26);
+    border-radius: 24px;
+    padding: 22px;
+    margin: 12px 0 18px 0;
+    box-shadow: 0 22px 60px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+}
+.glass-panel::before {
+    content: "";
+    position: absolute;
+    inset: -20% auto auto -10%;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 68%);
+    pointer-events: none;
+}
+.glass-panel::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -60px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.12), transparent 70%);
+    pointer-events: none;
+}
+.glass-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.glass-tile {
+    min-height: 132px;
+    padding: 18px 18px 16px 18px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.6));
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+.glass-tile-label {
+    font-size: 0.92rem;
+    color: #bfdbfe;
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+}
+.glass-tile-value {
+    font-size: clamp(1.7rem, 2vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: #f8fafc;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums lining-nums;
+}
+.glass-tile-value.compact {
+    font-size: clamp(1.4rem, 1.6vw, 1.8rem);
+}
+.glass-tile-value.tight {
+    font-size: clamp(1.15rem, 1.25vw, 1.45rem);
+}
+.glass-tile-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.delta-pos {
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.18);
+}
+.delta-neg {
+    color: #fda4af;
+    background: rgba(244, 63, 94, 0.16);
+}
+.delta-flat {
+    color: #cbd5e1;
+    background: rgba(148, 163, 184, 0.14);
+}
+.signal-card {
+    position: relative;
+    z-index: 1;
+    margin-top: 18px;
+    padding: 22px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(7, 18, 39, 0.88), rgba(2, 6, 23, 0.72));
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+.signal-card-buy {
+    box-shadow: inset 4px 0 0 #22c55e;
+}
+.signal-card-sell {
+    box-shadow: inset 4px 0 0 #ef4444;
+}
+.signal-card-hold {
+    box-shadow: inset 4px 0 0 #f59e0b;
+}
+.signal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.signal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+.signal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+.signal-item {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.54);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.signal-item-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+.signal-item-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.status-banner {
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.12));
+    border: 1px solid rgba(74, 222, 128, 0.16);
+    border-radius: 18px;
+    color: #4ade80;
+    padding: 16px 20px;
+    margin: 8px 0 14px 0;
+    font-weight: 700;
+}
+@media (max-width: 1100px) {
+    .glass-grid,
+    .signal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 720px) {
+    .glass-panel {
+        padding: 16px;
+        border-radius: 18px;
+    }
+    .glass-grid,
+    .signal-grid {
+        grid-template-columns: 1fr;
+    }
+    .glass-tile-value {
+        font-size: 1.7rem;
+    }
+    .signal-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
 .terminal-card {
     background: linear-gradient(180deg, #0f172a, #0b1322);
@@ -74,19 +258,16 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+apply_shared_theme()
 
-st.markdown(
-    """
-<div class="hero">
-  <h2 style="margin:0;">Demat Trading</h2>
-  <p style="margin:8px 0 0 0;">Broker-style order ticket with live quotes and model suggestion.</p>
-</div>
-""",
-    unsafe_allow_html=True,
+render_page_hero(
+    "Demat Trading",
+    "Broker-style order ticket with live quotes and model suggestion.",
 )
 
 MODEL_PATH = "models"
 MODEL_MAP = {"PPO": PPO, "A2C": A2C, "DDPG": DDPG, "SAC": SAC, "TD3": TD3}
+INITIAL_DEMAT_CASH = 100000.0
 RANGE_MAP = {
     "1D": ("1d", "1m", "1"),
     "5D": ("5d", "5m", "5"),
@@ -345,20 +526,43 @@ def model_signal(
     return signal, confidence, hit_rate
 
 
+def _delta_class(value: float) -> str:
+    if not np.isfinite(value):
+        return "delta-flat"
+    if value > 0:
+        return "delta-pos"
+    if value < 0:
+        return "delta-neg"
+    return "delta-flat"
+
+
+def _value_size_class(value: str) -> str:
+    length = len(value)
+    if length >= 14:
+        return "tight"
+    if length >= 10:
+        return "compact"
+    return ""
+
+
 def init_state():
     if "demat_cash" not in st.session_state:
-        st.session_state["demat_cash"] = 100000.0
+        st.session_state["demat_cash"] = INITIAL_DEMAT_CASH
     if "demat_positions" not in st.session_state:
         st.session_state["demat_positions"] = {}
     if "demat_trades" not in st.session_state:
         st.session_state["demat_trades"] = []
+    if "demat_realized_pnl" not in st.session_state:
+        st.session_state["demat_realized_pnl"] = 0.0
 
 
 def reset_demat_account():
-    st.session_state["demat_cash"] = 100000.0
+    st.session_state["demat_cash"] = INITIAL_DEMAT_CASH
     st.session_state["demat_positions"] = {}
     st.session_state["demat_trades"] = []
+    st.session_state["demat_realized_pnl"] = 0.0
     st.session_state["demat_order_qty"] = 1
+    st.session_state.pop("demat_order_notice", None)
 
 
 def execute_order(
@@ -380,6 +584,7 @@ def execute_order(
 
     positions: Dict[str, Dict[str, float]] = st.session_state["demat_positions"]
     cash = float(st.session_state["demat_cash"])
+    realized_pnl = 0.0
 
     notional = qty * price
     cost_rate = (fee_bps + slippage_bps) / 10000.0
@@ -393,7 +598,7 @@ def execute_order(
         current = positions.get(ticker, {"qty": 0, "avg_price": 0.0})
         new_qty = int(current["qty"]) + qty
         prev_notional = float(current["qty"]) * float(current["avg_price"])
-        avg_price = (prev_notional + notional) / new_qty
+        avg_price = (prev_notional + total) / new_qty
         positions[ticker] = {"qty": new_qty, "avg_price": avg_price}
         st.session_state["demat_cash"] = cash - total
     else:
@@ -403,12 +608,15 @@ def execute_order(
             st.error("Not enough quantity to sell.")
             return
         proceeds = notional - cost
+        avg_price = float(current["avg_price"])
+        realized_pnl = proceeds - (avg_price * qty)
         new_qty = holding - qty
         if new_qty == 0:
             positions.pop(ticker, None)
         else:
             positions[ticker]["qty"] = new_qty
         st.session_state["demat_cash"] = cash + proceeds
+        st.session_state["demat_realized_pnl"] = float(st.session_state["demat_realized_pnl"]) + realized_pnl
 
     st.session_state["demat_trades"].append(
         {
@@ -419,11 +627,16 @@ def execute_order(
             "Price": round(price, 4),
             "Notional": round(notional, 2),
             "Cost": round(cost, 2),
+            "Realized PnL": round(realized_pnl, 2),
             "Model Signal": signal,
             "Confidence": round(confidence, 3),
         }
     )
-    st.success(f"{side} order executed: {qty} {ticker} @ ${price:.2f}")
+    notice = f"{side} order executed: {qty} {ticker} @ ${price:.2f}"
+    if side == "SELL":
+        notice += f" | Realized PnL ${realized_pnl:,.2f}"
+    st.session_state["demat_order_notice"] = notice
+    st.rerun()
 
 
 init_state()
@@ -431,6 +644,7 @@ init_state()
 st.sidebar.header("Trade Setup")
 default_ticker = st.session_state.get("app_selected_ticker", "AAPL")
 ticker = st.sidebar.text_input("Ticker", value=(default_ticker or "AAPL")).strip().upper()
+st.session_state["app_selected_ticker"] = ticker or "AAPL"
 algo = st.sidebar.selectbox("RL Model", list(MODEL_MAP.keys()))
 long_only = st.sidebar.checkbox("Long Only", value=True)
 signal_strength = st.sidebar.slider("Signal Strength", 0.5, 3.0, 1.5, 0.1)
@@ -457,28 +671,31 @@ live_price, intraday_df, quote_meta = fetch_live_quote(ticker)
 signal_df = fetch_signal_frame(ticker)
 signal, confidence, hit_rate = model_signal(model, signal_df, long_only=long_only, strength=signal_strength)
 
+order_notice = st.session_state.pop("demat_order_notice", None)
+if order_notice:
+    st.markdown(f'<div class="status-banner">{order_notice}</div>', unsafe_allow_html=True)
+
 cash = float(st.session_state["demat_cash"])
 positions = st.session_state["demat_positions"]
 holding = positions.get(ticker, {"qty": 0, "avg_price": 0.0})
 holding_qty = int(holding["qty"])
 holding_value = holding_qty * live_price if np.isfinite(live_price) else 0.0
+holding_live_pnl = ((live_price - float(holding["avg_price"])) * holding_qty) if np.isfinite(live_price) else 0.0
 suggested_qty = 0
 if np.isfinite(live_price) and live_price > 0:
     budget = cash * min(0.25, max(0.03, confidence / 4))
     suggested_qty = max(1, int(budget / live_price))
 
 total_holdings_value = 0.0
+total_unrealized_pnl = 0.0
 for tk, p in positions.items():
     px_now, _, _ = fetch_live_quote(tk)
     if np.isfinite(px_now):
         total_holdings_value += int(p["qty"]) * float(px_now)
+        total_unrealized_pnl += (float(px_now) - float(p["avg_price"])) * int(p["qty"])
 portfolio_value = cash + total_holdings_value
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Live Price", f"${live_price:.2f}" if np.isfinite(live_price) else "N/A")
-col2.metric("Cash", f"${cash:,.2f}")
-col3.metric("Holdings Value", f"${total_holdings_value:,.2f}")
-col4.metric("Portfolio Value", f"${portfolio_value:,.2f}")
+realized_pnl = float(st.session_state["demat_realized_pnl"])
+total_pnl = portfolio_value - INITIAL_DEMAT_CASH
 
 signal_class = "signal-hold"
 if signal == "BUY":
@@ -486,19 +703,100 @@ if signal == "BUY":
 elif signal == "SELL":
     signal_class = "signal-sell"
 
-st.markdown(
-    f"""
-<div class="metric {signal_class}">
-  <h4 style="margin:0 0 8px 0;">Model Suggestion ({algo}) <span class="chip">{ticker}</span></h4>
-  <div><b>Action:</b> {signal}</div>
-  <div><b>Confidence:</b> {confidence:.2f}</div>
-  <div><b>Recent Hit Rate (40d):</b> {hit_rate * 100.0:.1f}%</div>
-  <div><b>Suggested Quantity:</b> {suggested_qty}</div>
-  <div><b>Current Holding ({ticker}):</b> {holding_qty} @ avg ${holding['avg_price']:.2f}</div>
+signal_card_class = "signal-card-hold"
+if signal == "BUY":
+    signal_card_class = "signal-card-buy"
+elif signal == "SELL":
+    signal_card_class = "signal-card-sell"
+
+live_price_text = f"${live_price:,.2f}" if np.isfinite(live_price) else "N/A"
+cash_text = f"${cash:,.2f}"
+holdings_text = f"${total_holdings_value:,.2f}"
+portfolio_text = f"${portfolio_value:,.2f}"
+live_price_size = _value_size_class(live_price_text)
+cash_size = _value_size_class(cash_text)
+holdings_size = _value_size_class(holdings_text)
+portfolio_size = _value_size_class(portfolio_text)
+unrealized_size = _value_size_class(f"{total_unrealized_pnl:+,.2f}")
+realized_size = _value_size_class(f"{realized_pnl:+,.2f}")
+total_pnl_size = _value_size_class(f"{total_pnl:+,.2f}")
+holding_size = _value_size_class(f"{holding_qty} shares")
+
+stats_html = f"""
+<div class="glass-panel">
+  <div class="glass-grid">
+    <div class="glass-tile">
+      <div class="glass-tile-label">Live Price</div>
+      <div class="glass-tile-value {live_price_size}">{live_price_text}</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Cash</div>
+      <div class="glass-tile-value {cash_size}">{cash_text}</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Holdings Value</div>
+      <div class="glass-tile-value {holdings_size}">{holdings_text}</div>
+      <div class="glass-tile-delta {_delta_class(total_unrealized_pnl)}">{total_unrealized_pnl:+,.2f} U-PnL</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Portfolio Value</div>
+      <div class="glass-tile-value {portfolio_size}">{portfolio_text}</div>
+      <div class="glass-tile-delta {_delta_class(total_pnl)}">{total_pnl:+,.2f} Total PnL</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Unrealized PnL</div>
+      <div class="glass-tile-value {unrealized_size}">{total_unrealized_pnl:+,.2f}</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Realized PnL</div>
+      <div class="glass-tile-value {realized_size}">{realized_pnl:+,.2f}</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Net PnL</div>
+      <div class="glass-tile-value {total_pnl_size}">{total_pnl:+,.2f}</div>
+    </div>
+    <div class="glass-tile">
+      <div class="glass-tile-label">Current Holding</div>
+      <div class="glass-tile-value {holding_size}">{holding_qty} shares</div>
+      <div class="glass-tile-delta {_delta_class(holding_live_pnl)}">{holding_live_pnl:+,.2f} {ticker} Live</div>
+    </div>
+  </div>
+
+  <div class="signal-card {signal_card_class}">
+    <div class="signal-head">
+      <div class="signal-title">Model Suggestion ({algo})</div>
+      <span class="chip">{ticker}</span>
+    </div>
+    <div class="signal-grid">
+      <div class="signal-item">
+        <div class="signal-item-label">Action</div>
+        <div class="signal-item-value">{signal}</div>
+      </div>
+      <div class="signal-item">
+        <div class="signal-item-label">Confidence</div>
+        <div class="signal-item-value">{confidence:.2f}</div>
+      </div>
+      <div class="signal-item">
+        <div class="signal-item-label">Recent Hit Rate</div>
+        <div class="signal-item-value">{hit_rate * 100.0:.1f}%</div>
+      </div>
+      <div class="signal-item">
+        <div class="signal-item-label">Suggested Quantity</div>
+        <div class="signal-item-value">{suggested_qty}</div>
+      </div>
+      <div class="signal-item">
+        <div class="signal-item-label">Average Price</div>
+        <div class="signal-item-value">${holding['avg_price']:.2f}</div>
+      </div>
+      <div class="signal-item">
+        <div class="signal-item-label">Live PnL</div>
+        <div class="signal-item-value">{holding_live_pnl:+,.2f}</div>
+      </div>
+    </div>
+  </div>
 </div>
-""",
-    unsafe_allow_html=True,
-)
+"""
+st.markdown(stats_html, unsafe_allow_html=True)
 if quote_meta.get("quote_time"):
     day_change_text = quote_meta.get("day_change_pct", "")
     day_change_line = f" | Day change: {float(day_change_text):.2f}%" if day_change_text else ""

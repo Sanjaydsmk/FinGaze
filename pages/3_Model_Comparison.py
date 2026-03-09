@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import yfinance as yf
+from theme import apply_shared_theme, render_page_hero
 from stable_baselines3 import PPO, A2C, DDPG, SAC, TD3
 
 try:
@@ -52,6 +53,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+apply_shared_theme()
 
 
 def performance_label(return_pct: float) -> str:
@@ -77,14 +79,9 @@ def style_fig(fig):
     return fig
 
 
-st.markdown(
-    """
-<div class="hero">
-  <h2>Model Comparison Lab</h2>
-  <p>Compare RL trading models for stocks and sector-allocation models using original historical data.</p>
-</div>
-""",
-    unsafe_allow_html=True,
+render_page_hero(
+    "Model Comparison Lab",
+    "Compare RL trading models for stocks and sector-allocation models using original historical data.",
 )
 
 if px is None:

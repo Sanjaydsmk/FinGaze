@@ -12,81 +12,179 @@ except ImportError:
 # =====================================
 # PAGE CONFIG
 # =====================================
-st.set_page_config(page_title="FinGaze AI Trader", layout="wide")
+st.set_page_config(page_title="FinGaze : AI-Based Stock Portfolio Risk Classifier", layout="wide")
 
 # =====================================
 # CUSTOM CSS (🔥 UI MAGIC)
 # =====================================
 st.markdown("""
 <style>
-
-/* Background */
+:root {
+    --bg-0: #07111f;
+    --bg-1: #0b1730;
+    --text-main: #f8fafc;
+    --text-soft: #cbd5e1;
+}
 .stApp {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    color: white;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.13), transparent 24%),
+        radial-gradient(circle at 85% 18%, rgba(96, 165, 250, 0.16), transparent 28%),
+        radial-gradient(circle at 60% 78%, rgba(74, 222, 128, 0.08), transparent 22%),
+        linear-gradient(145deg, var(--bg-0) 0%, var(--bg-1) 44%, #050b16 100%);
+    color: var(--text-main);
 }
-
-/* Sidebar */
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at center, black 48%, transparent 92%);
+    opacity: 0.22;
+}
+.main .block-container {
+    padding-top: 2.2rem;
+    padding-bottom: 4rem;
+    max-width: 1240px;
+}
 [data-testid="stSidebar"] {
-    background: #0f172a;
+    background:
+        radial-gradient(circle at top, rgba(96, 165, 250, 0.14), transparent 30%),
+        linear-gradient(180deg, #08111f 0%, #0b1322 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
 }
-
-/* Buttons */
+.hero-shell {
+    position: relative;
+    overflow: hidden;
+    padding: 32px 34px;
+    border-radius: 28px;
+    border: 1px solid rgba(125, 211, 252, 0.22);
+    background: linear-gradient(120deg, rgba(9, 18, 34, 0.92), rgba(17, 36, 69, 0.78));
+    box-shadow: 0 28px 80px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(18px);
+    animation: heroRise 900ms ease-out;
+}
+.hero-shell::before {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -50px;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(103, 232, 249, 0.22), transparent 70%);
+}
+.hero-shell::after {
+    content: "";
+    position: absolute;
+    left: -50px;
+    bottom: -90px;
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, rgba(96, 165, 250, 0.16), transparent 70%);
+}
+.hero-grid {
+    position: relative;
+    z-index: 1;
+    display: block;
+}
+.hero-title {
+    margin: 0;
+    font-size: clamp(2.4rem, 5vw, 4.3rem);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+    font-weight: 800;
+}
+.hero-title span {
+    display: block;
+    font-size: 0.64em;
+    line-height: 1.02;
+    background: linear-gradient(90deg, #f8fafc 0%, #7dd3fc 48%, #4ade80 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero-shell + div[data-testid="stButton"] {
+    margin-top: 34px;
+}
 .stButton>button {
-    background: linear-gradient(90deg, #0ea5e9, #2563eb);
+    background: linear-gradient(90deg, #0891b2, #2563eb 54%, #4f46e5 100%);
     color: white;
-    border-radius: 12px;
-    padding: 0.6em 1.5em;
-    font-weight: 600;
-    border: none;
-    transition: 0.3s ease;
+    border-radius: 14px;
+    padding: 0.72em 1.6em;
+    font-weight: 700;
+    border: 1px solid rgba(125, 211, 252, 0.14);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.24);
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
 }
-
 .stButton>button:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0px 0px 20px rgba(56, 189, 248, 0.45);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 18px 36px rgba(56, 189, 248, 0.28);
+    filter: saturate(1.08);
 }
-
-/* Cards */
 .metric-card {
-    background: rgba(255,255,255,0.05);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(9, 18, 36, 0.78), rgba(4, 10, 25, 0.9));
     padding: 25px;
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    backdrop-filter: blur(14px);
     text-align: center;
     min-height: 130px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border: 1px solid rgba(148, 163, 184, 0.22);
+    border: 1px solid rgba(148, 163, 184, 0.16);
     transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
-    animation: fadeSlide 500ms ease-out;
+    animation: fadeSlide 600ms ease-out;
+}
+.metric-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(103, 232, 249, 0.08), transparent 35%, rgba(74, 222, 128, 0.05));
+    opacity: 0;
+    transition: opacity 220ms ease;
 }
 .metric-card-large {
-    padding: 34px 24px;
-    border-radius: 18px;
+    padding: 34px 28px;
+    border-radius: 24px;
     margin-bottom: 14px;
-    min-height: 150px;
+    min-height: 170px;
+    text-align: left;
 }
-
 .metric-card:hover {
     transform: translateY(-7px) scale(1.01);
-    border-color: rgba(56, 189, 248, 0.55);
-    box-shadow: 0px 14px 30px rgba(56, 189, 248, 0.22);
+    border-color: rgba(56, 189, 248, 0.34);
+    box-shadow: 0 18px 38px rgba(14, 165, 233, 0.16);
+}
+.metric-card:hover::before {
+    opacity: 1;
 }
 .metric-card h4 {
+    position: relative;
     margin: 0 0 10px 0;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.82rem;
 }
 .metric-card h2 {
+    position: relative;
     margin: 0;
+    font-size: clamp(1.8rem, 2.5vw, 2.7rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
 }
 .metric-sub {
+    position: relative;
     margin-top: 6px;
     font-size: 0.95rem;
-    color: #cbd5e1;
+    color: #93c5fd;
 }
 .metrics-row .metric-card h2 {
-    font-size: 1.7rem;
+    font-size: clamp(1.55rem, 2vw, 2.15rem);
 }
 .metrics-row {
     display: grid;
@@ -105,31 +203,51 @@ st.markdown("""
         grid-template-columns: 1fr;
     }
 }
-
 [data-testid="stPlotlyChart"] {
-    border: 1px solid rgba(56, 189, 248, 0.18);
-    border-radius: 14px;
-    padding: 6px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 0.9));
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 18px;
+    padding: 8px;
+    background: linear-gradient(180deg, rgba(8, 15, 30, 0.76), rgba(2, 6, 23, 0.94));
     transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
     animation: fadeSlide 650ms ease-out;
+    box-shadow: 0 20px 40px rgba(2, 6, 23, 0.26);
 }
 [data-testid="stPlotlyChart"]:hover {
     transform: translateY(-4px) scale(1.006);
-    border-color: rgba(56, 189, 248, 0.55);
-    box-shadow: 0 14px 28px rgba(8, 47, 73, 0.45);
+    border-color: rgba(56, 189, 248, 0.38);
+    box-shadow: 0 22px 42px rgba(8, 47, 73, 0.45);
 }
-
 @keyframes fadeSlide {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
-/* Section Titles */
+@keyframes heroRise {
+    from { opacity: 0; transform: translateY(22px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .section-title {
-    font-size: 26px;
-    font-weight: 600;
+    font-size: 1.25rem;
+    font-weight: 700;
     margin-top: 30px;
+    margin-bottom: 12px;
+    color: var(--text-main);
+    letter-spacing: 0.01em;
+}
+.section-title::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 10px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #67e8f9, #60a5fa);
+    box-shadow: 0 0 14px rgba(103, 232, 249, 0.55);
+}
+@media (max-width: 640px) {
+    .hero-shell {
+        padding: 22px 20px;
+        border-radius: 22px;
+    }
 }
 
 </style>
@@ -138,8 +256,18 @@ st.markdown("""
 # =====================================
 # HEADER
 # =====================================
-st.markdown("<h1 style='text-align:center;'> FinGaze - AI Multi-Algorithm Trading System</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:lightgray;'>Advanced Reinforcement Learning Based Trading Dashboard</p>", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class="hero-shell">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-title">FinGaze :<span>AI-Based Stock Portfolio Risk Classifier</span></div>
+        </div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # =====================================
 # SIDEBAR
@@ -379,7 +507,15 @@ def forecast_future_returns(
 # =====================================
 # RUN SIMULATION
 # =====================================
-if st.button(" Run Trading Simulation"):
+run_simulation = False
+
+# =====================================
+# PREDICTION
+# =====================================
+st.markdown("---")
+run_simulation = st.button(" Run Trading Simulation")
+
+if run_simulation:
     if from_date >= to_date:
         st.error("`To Date` must be after `From Date`.")
         st.stop()
@@ -467,11 +603,6 @@ if st.button(" Run Trading Simulation"):
     st.session_state["last_return"] = float(returns[-1])
     st.session_state["recent_returns"] = returns
     st.success("Simulation completed. See structured sections below.")
-
-# =====================================
-# PREDICTION
-# =====================================
-st.markdown("---")
 
 backtest_result = st.session_state.get("app_backtest")
 if backtest_result:

@@ -3,6 +3,7 @@ from typing import Dict
 
 import pandas as pd
 import streamlit as st
+from theme import apply_shared_theme, render_page_hero
 
 try:
     import plotly.express as px_plotly
@@ -55,15 +56,11 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+apply_shared_theme()
 
-st.markdown(
-    """
-<div class="hero">
-  <h2>Future Prediction Details</h2>
-  <p>Dedicated view for forecast outputs from Sector Allocation page.</p>
-</div>
-""",
-    unsafe_allow_html=True,
+render_page_hero(
+    "Future Prediction Details",
+    "Dedicated view for forecast outputs from Sector Allocation page.",
 )
 
 future_df: pd.DataFrame = st.session_state.get("sector_page_future_df", pd.DataFrame())

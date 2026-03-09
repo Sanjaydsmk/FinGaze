@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 import yfinance as yf
+from theme import apply_shared_theme, render_page_hero
 try:
     import plotly.express as px_plotly
     import plotly.graph_objects as go
@@ -286,6 +287,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+apply_shared_theme()
 
 
 # ==========================
@@ -1071,14 +1073,9 @@ def simulate_future_profile(
 # PAGE LAYOUT
 # ==========================
 
-st.markdown(
-    """
-<div class="hero-wrap">
-  <h2>Sector Allocation Lab</h2>
-  <p>Model suggests one stock per selected sector. You can override picks and instantly view updated equity, price, and forecast visuals.</p>
-</div>
-""",
-    unsafe_allow_html=True,
+render_page_hero(
+    "Sector Allocation Lab",
+    "Model suggests one stock per selected sector. You can override picks and instantly view updated equity, price, and forecast visuals.",
 )
 
 with st.sidebar:
