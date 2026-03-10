@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 from typing import Dict, Tuple
 
@@ -17,7 +18,7 @@ except ImportError:
     px = None
     go = None
 
-st.set_page_config(page_title="Demat Trading", layout="wide")
+st.set_page_config(page_title="Demo Demat Trading", layout="wide")
 
 st.markdown(
     """
@@ -138,59 +139,6 @@ st.markdown(
     color: #cbd5e1;
     background: rgba(148, 163, 184, 0.14);
 }
-.signal-card {
-    position: relative;
-    z-index: 1;
-    margin-top: 18px;
-    padding: 22px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, rgba(7, 18, 39, 0.88), rgba(2, 6, 23, 0.72));
-    border: 1px solid rgba(96, 165, 250, 0.2);
-}
-.signal-card-buy {
-    box-shadow: inset 4px 0 0 #22c55e;
-}
-.signal-card-sell {
-    box-shadow: inset 4px 0 0 #ef4444;
-}
-.signal-card-hold {
-    box-shadow: inset 4px 0 0 #f59e0b;
-}
-.signal-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 18px;
-}
-.signal-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #f8fafc;
-}
-.signal-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-}
-.signal-item {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(15, 23, 42, 0.54);
-    border: 1px solid rgba(148, 163, 184, 0.12);
-}
-.signal-item-label {
-    font-size: 0.8rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 6px;
-}
-.signal-item-value {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #e2e8f0;
-}
 .status-banner {
     background: linear-gradient(90deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.12));
     border: 1px solid rgba(74, 222, 128, 0.16);
@@ -201,8 +149,7 @@ st.markdown(
     font-weight: 700;
 }
 @media (max-width: 1100px) {
-    .glass-grid,
-    .signal-grid {
+    .glass-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -211,16 +158,11 @@ st.markdown(
         padding: 16px;
         border-radius: 18px;
     }
-    .glass-grid,
-    .signal-grid {
+    .glass-grid {
         grid-template-columns: 1fr;
     }
     .glass-tile-value {
         font-size: 1.7rem;
-    }
-    .signal-head {
-        align-items: flex-start;
-        flex-direction: column;
     }
 }
 .terminal-card {
@@ -261,13 +203,14 @@ st.markdown(
 apply_shared_theme()
 
 render_page_hero(
-    "Demat Trading",
-    "Broker-style order ticket with live quotes and model suggestion.",
+    "Demo Demat Trading",
+    "Paper-trading account with fake money, live market data, and model-assisted decisions.",
 )
 
 MODEL_PATH = "models"
 MODEL_MAP = {"PPO": PPO, "A2C": A2C, "DDPG": DDPG, "SAC": SAC, "TD3": TD3}
 INITIAL_DEMAT_CASH = 100000.0
+LIVE_REFRESH_SECONDS = 5
 RANGE_MAP = {
     "1D": ("1d", "1m", "1"),
     "5D": ("5d", "5m", "5"),
@@ -325,7 +268,7 @@ def load_model(algo: str):
     return MODEL_MAP[algo].load(path)
 
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=5)
 def fetch_live_quote(ticker: str) -> Tuple[float, pd.DataFrame, Dict[str, str]]:
     data = yf.download(
         ticker,
@@ -526,6 +469,99 @@ def model_signal(
     return signal, confidence, hit_rate
 
 
+def recommend_trade_plan(
+    signal: str,
+    confidence: float,
+    hit_rate: float,
+    live_price: float,
+    cash: float,
+    holding_qty: int,
+    signal_df: pd.DataFrame,
+) -> Dict[str, float]:
+    plan = {
+        "buy_qty": 0,
+        "sell_qty": 0,
+        "allocation_pct": 0.0,
+        "risk_pct": 0.0,
+        "stop_pct": 0.0,
+        "vol_pct": 0.0,
+        "edge_score": 0.0,
+    }
+    if not np.isfinite(live_price) or live_price <= 0:
+        return plan
+
+    returns = signal_df["Return"].dropna() if "Return" in signal_df else pd.Series(dtype=np.float64)
+    vol20 = float(returns.tail(20).std()) if not returns.empty else 0.0
+    vol20 = max(vol20, 0.005)
+    hit_edge = float(np.clip((hit_rate - 0.5) * 2.0, 0.0, 1.0))
+    edge_score = float(np.clip((0.65 * confidence) + (0.35 * hit_edge), 0.0, 1.0))
+
+    allocation_pct = float(np.clip(0.04 + (0.24 * edge_score) - min(vol20 * 5.0, 0.12), 0.03, 0.30))
+    risk_pct = float(np.clip(0.008 + (0.035 * edge_score), 0.008, 0.045))
+    stop_pct = float(np.clip(vol20 * 2.2, 0.015, 0.12))
+
+    budget_cap = cash * allocation_pct
+    risk_cap = cash * risk_pct
+    qty_by_budget = int(budget_cap / live_price)
+    qty_by_risk = int(risk_cap / max(live_price * stop_pct, 1e-8))
+
+    if signal == "BUY" and cash > 0:
+        plan["buy_qty"] = max(1, min(qty_by_budget, qty_by_risk))
+    elif signal == "SELL" and holding_qty > 0:
+        sell_fraction = float(np.clip(0.2 + (0.75 * edge_score), 0.2, 1.0))
+        plan["sell_qty"] = max(1, int(np.ceil(holding_qty * sell_fraction)))
+
+    plan["allocation_pct"] = allocation_pct
+    plan["risk_pct"] = risk_pct
+    plan["stop_pct"] = stop_pct
+    plan["vol_pct"] = vol20
+    plan["edge_score"] = edge_score
+    return plan
+
+
+def build_trade_analysis(trades: list) -> pd.DataFrame:
+    if not trades:
+        return pd.DataFrame()
+
+    rows = []
+    for trade in trades:
+        ticker = str(trade.get("Ticker", "")).upper()
+        side = str(trade.get("Side", "BUY")).upper()
+        fill_price = float(trade.get("Price", np.nan))
+        qty = int(trade.get("Qty", 0))
+        suggested_qty = int(trade.get("Suggested Qty", qty))
+        if not ticker or not np.isfinite(fill_price) or fill_price <= 0:
+            continue
+
+        current_price, _, _ = fetch_live_quote(ticker)
+        if not np.isfinite(current_price):
+            continue
+
+        direction = 1.0 if side == "BUY" else -1.0
+        per_share_edge = (float(current_price) - fill_price) * direction
+        live_edge_pnl = per_share_edge * qty
+        suggested_edge_pnl = per_share_edge * suggested_qty
+        live_edge_pct = (per_share_edge / fill_price) * 100.0
+
+        rows.append(
+            {
+                "Time": trade.get("Time", ""),
+                "Ticker": ticker,
+                "Side": side,
+                "Executed Qty": qty,
+                "Suggested Qty": suggested_qty,
+                "Fill Price": round(fill_price, 4),
+                "Current Price": round(float(current_price), 4),
+                "Model Edge %": round(float(live_edge_pct), 2),
+                "Executed Edge $": round(float(live_edge_pnl), 2),
+                "Suggested Edge $": round(float(suggested_edge_pnl), 2),
+                "Signal Accurate": "Yes" if live_edge_pnl > 0 else ("No" if live_edge_pnl < 0 else "Flat"),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 def _delta_class(value: float) -> str:
     if not np.isfinite(value):
         return "delta-flat"
@@ -546,21 +582,28 @@ def _value_size_class(value: str) -> str:
 
 
 def init_state():
+    if "demat_base_cash" not in st.session_state:
+        st.session_state["demat_base_cash"] = INITIAL_DEMAT_CASH
     if "demat_cash" not in st.session_state:
-        st.session_state["demat_cash"] = INITIAL_DEMAT_CASH
+        st.session_state["demat_cash"] = float(st.session_state["demat_base_cash"])
     if "demat_positions" not in st.session_state:
         st.session_state["demat_positions"] = {}
     if "demat_trades" not in st.session_state:
         st.session_state["demat_trades"] = []
     if "demat_realized_pnl" not in st.session_state:
         st.session_state["demat_realized_pnl"] = 0.0
+    if "demat_orders" not in st.session_state:
+        st.session_state["demat_orders"] = []
 
 
-def reset_demat_account():
-    st.session_state["demat_cash"] = INITIAL_DEMAT_CASH
+def reset_demat_account(base_cash: float | None = None):
+    if base_cash is not None:
+        st.session_state["demat_base_cash"] = float(base_cash)
+    st.session_state["demat_cash"] = float(st.session_state["demat_base_cash"])
     st.session_state["demat_positions"] = {}
     st.session_state["demat_trades"] = []
     st.session_state["demat_realized_pnl"] = 0.0
+    st.session_state["demat_orders"] = []
     st.session_state["demat_order_qty"] = 1
     st.session_state.pop("demat_order_notice", None)
 
@@ -569,11 +612,13 @@ def execute_order(
     side: str,
     ticker: str,
     qty: int,
+    suggested_qty: int,
     price: float,
     fee_bps: float,
     slippage_bps: float,
     signal: str,
     confidence: float,
+    sizing_plan: Dict[str, float],
 ):
     if qty <= 0:
         st.warning("Quantity must be greater than 0.")
@@ -630,9 +675,27 @@ def execute_order(
             "Realized PnL": round(realized_pnl, 2),
             "Model Signal": signal,
             "Confidence": round(confidence, 3),
+            "Suggested Qty": int(max(0, suggested_qty)),
+            "Sizing %": round(float(sizing_plan.get("allocation_pct", 0.0)) * 100.0, 2),
+            "Risk %": round(float(sizing_plan.get("risk_pct", 0.0)) * 100.0, 2),
+            "Stop %": round(float(sizing_plan.get("stop_pct", 0.0)) * 100.0, 2),
         }
     )
-    notice = f"{side} order executed: {qty} {ticker} @ ${price:.2f}"
+    st.session_state["demat_orders"].append(
+        {
+            "Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Ticker": ticker,
+            "Side": side,
+            "Status": "PAPER FILLED",
+            "Order Type": "PAPER MARKET",
+            "Qty": qty,
+            "Price": round(price, 4),
+            "Value": round(notional, 2),
+            "Model Signal": signal,
+            "Suggested Qty": int(max(0, suggested_qty)),
+        }
+    )
+    notice = f"Paper {side} executed: {qty} {ticker} @ ${price:.2f}"
     if side == "SELL":
         notice += f" | Realized PnL ${realized_pnl:,.2f}"
     st.session_state["demat_order_notice"] = notice
@@ -640,6 +703,33 @@ def execute_order(
 
 
 init_state()
+
+st.sidebar.header("Demo Account")
+demo_starting_cash = st.sidebar.number_input(
+    "Starting Fake Balance",
+    min_value=1000.0,
+    max_value=10000000.0,
+    value=float(st.session_state.get("demat_base_cash", INITIAL_DEMAT_CASH)),
+    step=1000.0,
+)
+virtual_top_up = st.sidebar.number_input(
+    "Add Fake Funds",
+    min_value=0.0,
+    max_value=10000000.0,
+    value=0.0,
+    step=1000.0,
+)
+if st.sidebar.button("Apply Starting Balance"):
+    reset_demat_account(base_cash=demo_starting_cash)
+    fetch_live_quote.clear()
+    fetch_signal_frame.clear()
+    fetch_chart_ohlc.clear()
+    st.rerun()
+if st.sidebar.button("Add Fake Funds"):
+    if virtual_top_up > 0:
+        st.session_state["demat_cash"] = float(st.session_state["demat_cash"]) + float(virtual_top_up)
+        st.session_state["demat_order_notice"] = f"Added fake funds: ${virtual_top_up:,.2f}"
+        st.rerun()
 
 st.sidebar.header("Trade Setup")
 default_ticker = st.session_state.get("app_selected_ticker", "AAPL")
@@ -676,15 +766,15 @@ if order_notice:
     st.markdown(f'<div class="status-banner">{order_notice}</div>', unsafe_allow_html=True)
 
 cash = float(st.session_state["demat_cash"])
+base_cash = float(st.session_state["demat_base_cash"])
 positions = st.session_state["demat_positions"]
 holding = positions.get(ticker, {"qty": 0, "avg_price": 0.0})
 holding_qty = int(holding["qty"])
 holding_value = holding_qty * live_price if np.isfinite(live_price) else 0.0
 holding_live_pnl = ((live_price - float(holding["avg_price"])) * holding_qty) if np.isfinite(live_price) else 0.0
-suggested_qty = 0
-if np.isfinite(live_price) and live_price > 0:
-    budget = cash * min(0.25, max(0.03, confidence / 4))
-    suggested_qty = max(1, int(budget / live_price))
+trade_plan = recommend_trade_plan(signal, confidence, hit_rate, live_price, cash, holding_qty, signal_df)
+suggested_buy_qty = int(trade_plan["buy_qty"])
+suggested_sell_qty = int(trade_plan["sell_qty"])
 
 total_holdings_value = 0.0
 total_unrealized_pnl = 0.0
@@ -695,19 +785,16 @@ for tk, p in positions.items():
         total_unrealized_pnl += (float(px_now) - float(p["avg_price"])) * int(p["qty"])
 portfolio_value = cash + total_holdings_value
 realized_pnl = float(st.session_state["demat_realized_pnl"])
-total_pnl = portfolio_value - INITIAL_DEMAT_CASH
-
-signal_class = "signal-hold"
-if signal == "BUY":
-    signal_class = "signal-buy"
-elif signal == "SELL":
-    signal_class = "signal-sell"
-
-signal_card_class = "signal-card-hold"
-if signal == "BUY":
-    signal_card_class = "signal-card-buy"
-elif signal == "SELL":
-    signal_card_class = "signal-card-sell"
+total_pnl = portfolio_value - base_cash
+available_margin = cash
+invested_amount = total_holdings_value
+portfolio_return_pct = (total_pnl / base_cash) * 100.0 if base_cash > 0 else 0.0
+day_pnl_total = 0.0
+for tk, p in positions.items():
+    px_now, _, tk_meta = fetch_live_quote(tk)
+    prev_close = float(tk_meta["previous_close"]) if tk_meta.get("previous_close") else np.nan
+    if np.isfinite(px_now) and np.isfinite(prev_close):
+        day_pnl_total += (float(px_now) - prev_close) * int(p["qty"])
 
 live_price_text = f"${live_price:,.2f}" if np.isfinite(live_price) else "N/A"
 cash_text = f"${cash:,.2f}"
@@ -761,52 +848,13 @@ stats_html = f"""
       <div class="glass-tile-delta {_delta_class(holding_live_pnl)}">{holding_live_pnl:+,.2f} {ticker} Live</div>
     </div>
   </div>
-
-  <div class="signal-card {signal_card_class}">
-    <div class="signal-head">
-      <div class="signal-title">Model Suggestion ({algo})</div>
-      <span class="chip">{ticker}</span>
-    </div>
-    <div class="signal-grid">
-      <div class="signal-item">
-        <div class="signal-item-label">Action</div>
-        <div class="signal-item-value">{signal}</div>
-      </div>
-      <div class="signal-item">
-        <div class="signal-item-label">Confidence</div>
-        <div class="signal-item-value">{confidence:.2f}</div>
-      </div>
-      <div class="signal-item">
-        <div class="signal-item-label">Recent Hit Rate</div>
-        <div class="signal-item-value">{hit_rate * 100.0:.1f}%</div>
-      </div>
-      <div class="signal-item">
-        <div class="signal-item-label">Suggested Quantity</div>
-        <div class="signal-item-value">{suggested_qty}</div>
-      </div>
-      <div class="signal-item">
-        <div class="signal-item-label">Average Price</div>
-        <div class="signal-item-value">${holding['avg_price']:.2f}</div>
-      </div>
-      <div class="signal-item">
-        <div class="signal-item-label">Live PnL</div>
-        <div class="signal-item-value">{holding_live_pnl:+,.2f}</div>
-      </div>
-    </div>
-  </div>
 </div>
 """
 st.markdown(stats_html, unsafe_allow_html=True)
-if quote_meta.get("quote_time"):
-    day_change_text = quote_meta.get("day_change_pct", "")
-    day_change_line = f" | Day change: {float(day_change_text):.2f}%" if day_change_text else ""
-    st.caption(
-        f"Live quote source: {quote_meta.get('source', 'unknown')} | Last tick: {quote_meta.get('quote_time')}{day_change_line}"
-    )
 
 if st.session_state.get("demat_order_ticker") != ticker:
     st.session_state["demat_order_ticker"] = ticker
-    st.session_state["demat_order_qty"] = max(1, suggested_qty)
+    st.session_state["demat_order_qty"] = max(1, suggested_buy_qty if suggested_buy_qty > 0 else 1)
 if "demat_order_qty" not in st.session_state:
     st.session_state["demat_order_qty"] = 1
 
@@ -882,21 +930,73 @@ desk_left, desk_right = st.columns([1.0, 1.4])
 
 with desk_left:
     st.markdown('<div class="order-card">', unsafe_allow_html=True)
-    st.markdown("#### Order Ticket")
+    st.markdown("#### Paper Order Ticket")
     st.markdown(f"**Symbol:** `{ticker}`  |  **LTP:** `{f'${live_price:.2f}' if np.isfinite(live_price) else 'N/A'}`")
     st.number_input("Order Quantity", min_value=1, step=1, key="demat_order_qty")
     order_qty = int(st.session_state["demat_order_qty"])
+    st.caption(
+        f"Model sizing: buy `{suggested_buy_qty}` | sell `{suggested_sell_qty}` | stop distance `{trade_plan['stop_pct'] * 100.0:.2f}%`"
+    )
     order_cols = st.columns(2)
     if order_cols[0].button("BUY", use_container_width=True):
-        execute_order("BUY", ticker, order_qty, live_price, fee_bps, slippage_bps, signal, confidence)
+        execute_order(
+            "BUY",
+            ticker,
+            order_qty,
+            suggested_buy_qty,
+            live_price,
+            fee_bps,
+            slippage_bps,
+            signal,
+            confidence,
+            trade_plan,
+        )
     if order_cols[1].button("SELL", use_container_width=True):
-        execute_order("SELL", ticker, order_qty, live_price, fee_bps, slippage_bps, signal, confidence)
+        execute_order(
+            "SELL",
+            ticker,
+            order_qty,
+            suggested_sell_qty,
+            live_price,
+            fee_bps,
+            slippage_bps,
+            signal,
+            confidence,
+            trade_plan,
+        )
     quick_cols = st.columns(2)
-    if quick_cols[0].button("Buy Suggested", use_container_width=True):
-        execute_order("BUY", ticker, suggested_qty, live_price, fee_bps, slippage_bps, signal, confidence)
-    if quick_cols[1].button("Sell Suggested", use_container_width=True):
-        execute_order("SELL", ticker, min(suggested_qty, holding_qty), live_price, fee_bps, slippage_bps, signal, confidence)
-    st.caption("Quantity is fully user-controlled in the order ticket.")
+    if quick_cols[0].button("Buy Suggested", use_container_width=True, disabled=suggested_buy_qty <= 0):
+        execute_order(
+            "BUY",
+            ticker,
+            suggested_buy_qty,
+            suggested_buy_qty,
+            live_price,
+            fee_bps,
+            slippage_bps,
+            signal,
+            confidence,
+            trade_plan,
+        )
+    sell_quick_qty = suggested_sell_qty if suggested_sell_qty > 0 else holding_qty
+    if quick_cols[1].button(
+        "Sell Suggested",
+        use_container_width=True,
+        disabled=holding_qty <= 0,
+    ):
+        execute_order(
+            "SELL",
+            ticker,
+            min(sell_quick_qty, holding_qty),
+            suggested_sell_qty,
+            live_price,
+            fee_bps,
+            slippage_bps,
+            signal,
+            confidence,
+            trade_plan,
+        )
+    st.caption("This is simulated execution with fake money. Live PnL uses the latest fetched quote, and suggested quantity comes from the model.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with desk_right:
@@ -924,16 +1024,21 @@ with desk_right:
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 st.markdown("### 3) Portfolio")
-portfolio_tab1, portfolio_tab2 = st.tabs(["Open Positions", "Trade Book"])
+trade_analysis_df = build_trade_analysis(st.session_state["demat_trades"])
+portfolio_tab1, portfolio_tab2, portfolio_tab3, portfolio_tab4 = st.tabs(
+    ["Holdings", "Order Book", "Trade Book", "Model Accuracy"]
+)
 with portfolio_tab1:
     if positions:
         rows = []
         for tk, p in positions.items():
-            px_now, _, _ = fetch_live_quote(tk)
+            px_now, _, tk_meta = fetch_live_quote(tk)
             qty = int(p["qty"])
             avg = float(p["avg_price"])
             mkt_val = qty * px_now if np.isfinite(px_now) else np.nan
             pnl = (px_now - avg) * qty if np.isfinite(px_now) else np.nan
+            prev_close = float(tk_meta["previous_close"]) if tk_meta.get("previous_close") else np.nan
+            day_pnl = (px_now - prev_close) * qty if np.isfinite(px_now) and np.isfinite(prev_close) else np.nan
             rows.append(
                 {
                     "Ticker": tk,
@@ -941,7 +1046,9 @@ with portfolio_tab1:
                     "Avg Price": round(avg, 4),
                     "Live Price": round(float(px_now), 4) if np.isfinite(px_now) else np.nan,
                     "Market Value": round(float(mkt_val), 2) if np.isfinite(mkt_val) else np.nan,
+                    "Day PnL": round(float(day_pnl), 2) if np.isfinite(day_pnl) else np.nan,
                     "Unrealized PnL": round(float(pnl), 2) if np.isfinite(pnl) else np.nan,
+                    "Return %": round(float(((px_now / avg) - 1.0) * 100.0), 2) if np.isfinite(px_now) and avg > 0 else np.nan,
                 }
             )
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
@@ -949,8 +1056,38 @@ with portfolio_tab1:
         st.info("No open positions.")
 
 with portfolio_tab2:
+    if st.session_state["demat_orders"]:
+        orders_df = pd.DataFrame(st.session_state["demat_orders"]).iloc[::-1].reset_index(drop=True)
+        st.dataframe(orders_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No orders placed yet.")
+
+with portfolio_tab3:
     if st.session_state["demat_trades"]:
         trades_df = pd.DataFrame(st.session_state["demat_trades"]).iloc[::-1].reset_index(drop=True)
         st.dataframe(trades_df, use_container_width=True, hide_index=True)
     else:
         st.info("No trades executed yet.")
+
+with portfolio_tab4:
+    if not trade_analysis_df.empty:
+        accuracy_score = float((trade_analysis_df["Signal Accurate"] == "Yes").mean() * 100.0)
+        executed_edge_total = float(trade_analysis_df["Executed Edge $"].sum())
+        suggested_edge_total = float(trade_analysis_df["Suggested Edge $"].sum())
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        metric_col1.metric("Signal Accuracy", f"{accuracy_score:.1f}%")
+        metric_col2.metric("Executed Edge", f"${executed_edge_total:,.2f}")
+        metric_col3.metric("Suggested Qty Edge", f"${suggested_edge_total:,.2f}")
+        st.dataframe(
+            trade_analysis_df.iloc[::-1].reset_index(drop=True),
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.caption(
+            "Executed Edge shows mark-to-market PnL on the quantity actually traded. Suggested Qty Edge shows the same move using the model-recommended quantity."
+        )
+    else:
+        st.info("No trade accuracy data available yet.")
+
+time.sleep(LIVE_REFRESH_SECONDS)
+st.rerun()
